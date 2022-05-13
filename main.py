@@ -3,6 +3,7 @@ from PIL import Image
 import cv2
 import os
 import discord
+import aiohttp
 
 CLIP_FRAMES = 6571
 
@@ -45,9 +46,12 @@ def framecapture():
     count = 0
     success = 1
     while success:
-        success, image = vidObj.read()
-        cv2.imwrite("frames/frame%d.jpg" % count, image)
-        count += 1
+        try:
+            success, image = vidObj.read()
+            cv2.imwrite("frames/frame%d.jpg" % count, image)
+            count += 1
+        except:
+            pass
 
 def runner(path):
     image = None
@@ -70,7 +74,9 @@ for i in range(0, int(CLIP_FRAMES/4)+1):
     path = "frames/frame"+str(i*4)+".jpg"
     frames.append(runner(path))
 
-client = discord.Client()
+client = discord.Client(
+    intents=discord.Intents.all()
+)
 
 @client.event
 async def on_ready():
@@ -86,10 +92,12 @@ async def on_message(message):
             while not disp:
                 newTimestamp = time.time()
                 if (newTimestamp - oldTimestamp) >= TIMEOUT:
-                    await message.channel.send(frames[int(i)])
+                    async with aiohttp.ClientSession() as session:
+                        webhook_1 = discord.Webhook.from_url("URL", session=session)
+                        await webhook_1.send(frames[int(i)],username='bad apple',wait=True)
                     newTimestamp = time.time()
                     i += (newTimestamp - oldTimestamp)/TIMEOUT
                     oldTimestamp = newTimestamp
                     disp = True
 
-client.run('TOKEN')
+client.run("TOKEN")
